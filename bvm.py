@@ -25,6 +25,7 @@ class BVM:
         if instruction is not None:
             getattr(self.cpu, instruction['op'])(instruction['args'])
         self.cpu.step()
+        # Print out the first 16 registers (R0-R15) on each step
         print(self.cpu.ram[0:16])
 
     def run(self):
@@ -37,6 +38,3 @@ if __name__ == "__main__":
     bvm.load('program.bvm')
     print(bvm.progMem)
     bvm.run()
-    #bvm.step()
-    #bvm.step()
-    #bvm.step()

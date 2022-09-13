@@ -1,5 +1,7 @@
-from tkinter import N
-
+# bvmParser.py
+# Adam Zeloof
+# 3.12.2022
+# requires Python 3.10 or higher
 
 def parse(instruction):
     # Convert to a binary string, drop the leading '0b'
