@@ -5,6 +5,10 @@
 
 from bvmParser import parse
 from bvmCPU import CPU
+from bvmGUI import GUI
+
+import sys
+import getopt
 
 class BVM:
     def __init__(self):
@@ -33,8 +37,28 @@ class BVM:
             self.step()
 
 
+def main(argv):
+    try:
+        opts, args = getopt.getopt(argv,"g")
+    except getopt.GetoptError:
+        print("bvm.py [-g]")
+        sys.exit(2)
+        
+    guiMode = False
+
+    for opt, arg in opts:
+        if opt == '-g':
+            guiMode = True
+
+    if guiMode:
+        gui = GUI()
+        gui.run()
+    else:
+        # No GUI, run program.bvm
+        bvm = BVM()
+        bvm.load('program.bvm')
+        bvm.run()
+
+
 if __name__ == "__main__":
-    bvm = BVM()
-    bvm.load('program.bvm')
-    print(bvm.progMem)
-    bvm.run()
+    main(sys.argv[1:])
