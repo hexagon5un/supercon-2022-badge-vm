@@ -3,6 +3,17 @@
 # 3.12.2022
 # requires Python 3.10 or higher
 
+def format(n):
+    if len(n) < 2:
+        return int(n)
+    else:
+        if n[0:2] == '0x':
+            return int(n[2:],16)
+        elif n[0:2] == '0b':
+            return int(n[2:],2)
+        else:
+            return int(n)
+
 def parse(instruction, mode):
     if mode == "bin":
         # Convert to a binary string, drop the leading '0b'
@@ -208,7 +219,7 @@ def parse(instruction, mode):
                         # R0,N
                         return {
                             'op': 'ADD',
-                            'args': {'mode':1, 'n':int(args[1])}
+                            'args': {'mode':1, 'n':format(args[1])}
                         }
                 case 'adc':
                     # RX,RY
@@ -251,7 +262,7 @@ def parse(instruction, mode):
                         # R0,N
                         return {
                             'op': 'OR',
-                            'args': {'mode':1, 'n':int(args[1])}
+                            'args': {'mode':1, 'n':format(args[1])}
                         }
                 case 'and':
                     assert(nArgs==2)
@@ -267,7 +278,7 @@ def parse(instruction, mode):
                         # R0,N
                         return {
                             'op': 'AND',
-                            'args': {'mode':1, 'n':int(args[1])}
+                            'args': {'mode':1, 'n':format(args[1])}
                         }
                 case 'xor':
                     assert(nArgs==2)
@@ -283,7 +294,7 @@ def parse(instruction, mode):
                         # R0,N
                         return {
                             'op': 'XOR',
-                            'args': {'mode':1, 'n':int(args[1])}
+                            'args': {'mode':1, 'n':format(args[1])}
                         }
                 case 'mov':
                     if args[0][0] == 'r' and args[1][0] == 'r':
@@ -314,14 +325,14 @@ def parse(instruction, mode):
                         }
                     elif args[0][0] == '[':
                         # [NN],R0
-                        nn = int(args[0].strip('[]'))
+                        nn = format(args[0].strip('[]'))
                         return {
                             'op': 'MOV',
                             'args': {'mode':4, 'nn':nn}
                         }
                     elif args[1][0] == '[':
                         # R0,[NN]
-                        nn = int(args[1].strip('[]'))
+                        nn = format(args[1].strip('[]'))
                         return {
                             'op': 'MOV',
                             'args': {'mode':5, 'nn':nn}
@@ -331,62 +342,61 @@ def parse(instruction, mode):
                         x = int(args[0][1:])
                         return {
                             'op': 'MOV',
-                            'args': {'mode':1, 'x':x, 'n':int(args[1])}
+                            'args': {'mode':1, 'x':x, 'n':format(args[1])}
                         }
                     elif args[0] == 'pc':
                         # PC,NN
-                        nn = int(args[1])
                         return {
                             'op': 'MOV',
-                            'args': {'mode':6, 'nn':nn}
+                            'args': {'mode':6, 'nn':format(args[1])}
                         }
                 case 'jr':
                     # NN
                     assert(nArgs==1)
                     return {
                         'op': 'JR',
-                        'args': {'nn':int(args[0])}
+                        'args': {'nn':format(args[0])}
                         }
                 case 'cp':
                     # R0,N
                     assert(nArgs==2)
                     return {
                         'op': 'CP',
-                        'args': {'n':int(args[0])}
+                        'args': {'n':format(args[0])}
                         }
                 case 'inc':
                     # R0,N
                     assert(nArgs==2)
                     return {
                         'op': 'INC',
-                        'args': {'n':int(args[0])}
+                        'args': {'n':format(args[0])}
                         }
                 case 'dec':
                     # R0,N
                     assert(nArgs==2)
                     return {
                         'op': 'DEC',
-                        'args': {'n':int(args[0])}
+                        'args': {'n':format(args[0])}
                         }
                 case 'dsz':
                     # R0,N
                     assert(nArgs==2)
                     return {
                         'op': 'DSZ',
-                        'args': {'n':int(args[0])}
+                        'args': {'n':format(args[0])}
                         }
                 case 'exr':
                     # N
                     assert(nArgs==1)
                     return {
                         'op': 'EXR',
-                        'args': {'n':int(args[0])}
+                        'args': {'n':format(args[0])}
                         }
                 case 'bit':
                     # RG,M
                     assert(nArgs==2)
-                    g = int(args[0][1:])
-                    m = int(args[1])
+                    g = format(args[0][1:])
+                    m = format(args[1])
                     return {
                         'op': 'BIT',
                         'args': {'g':g, 'm':m}
@@ -395,7 +405,7 @@ def parse(instruction, mode):
                     # RG,M
                     assert(nArgs==2)
                     g = int(args[0][1:])
-                    m = int(args[1])
+                    m = format(args[1])
                     return {
                         'op': 'BSET',
                         'args': {'g':g, 'm':m}
@@ -404,7 +414,7 @@ def parse(instruction, mode):
                     # RG,M
                     assert(nArgs==2)
                     g = int(args[0][1:])
-                    m = int(args[1])
+                    m = format(args[1])
                     return {
                         'op': 'BCLR',
                         'args': {'g':g, 'm':m}
@@ -413,7 +423,7 @@ def parse(instruction, mode):
                     # RG,M
                     assert(nArgs==2)
                     g = int(args[0][1:])
-                    m = int(args[1])
+                    m = format(args[1])
                     return {
                         'op': 'BTG',
                         'args': {'g':g, 'm':m}
@@ -429,7 +439,7 @@ def parse(instruction, mode):
                 case 'ret':
                     # R0,N
                     assert(nArgs==2)
-                    n = int(args[1])
+                    n = format(args[1])
                     return {
                         'op': 'RET',
                         'args': {'n':n}
@@ -438,7 +448,7 @@ def parse(instruction, mode):
                     #F,M
                     return {
                         'op': 'SKIP',
-                        'args': {'f':int(args[0]), 'm':int(args[1])}
+                        'args': {'f':format(args[0]), 'm':format(args[1])}
                     }
                     
     

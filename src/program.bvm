@@ -12,9 +12,9 @@
 //0000 0100 1000 // DSZ 8
 //1111 1111 1101 // JR -2     this infinitley loops (intentionally)
 
-mov r0,4
-mov r0,15
-mov r0,[56]
+mov r0,0x4
+mov r0,0xF
+mov r0,[0x38]
 mov r0,4
 mov r1,1
 or r0,r1
