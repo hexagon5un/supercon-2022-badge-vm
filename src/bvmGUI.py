@@ -93,7 +93,7 @@ class GUI:
 
     def run(self):
         self.window.after(self.frameDelay, self.runtimeTasks)
-        self.badge.load('program.bvm')
+        self.badge.load('heart.bvm')
         self.window.mainloop()
 
 
