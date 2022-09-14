@@ -39,16 +39,16 @@ class BVM:
 
 def main(argv):
     try:
-        opts, args = getopt.getopt(argv,"g")
+        opts, args = getopt.getopt(argv,"t")
     except getopt.GetoptError:
-        print("bvm.py [-g]")
+        print("bvm.py [-t]")
         sys.exit(2)
         
-    guiMode = False
+    guiMode = True
 
     for opt, arg in opts:
-        if opt == '-g':
-            guiMode = True
+        if opt == '-t':
+            guiMode = False
 
     if guiMode:
         gui = GUI()

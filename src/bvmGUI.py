@@ -4,22 +4,34 @@
 # requires Python 3.10 or higher
 
 from optparse import OptionConflictError
-from bvmCPU import CPU
+from badge import Badge
 
 import tkinter as tk
 from PIL import Image, ImageTk
 import csv
-import math
+import time
+
+def pad(n, b):
+    if len(n) < b:
+        n = '0'*(b-len(n)) + n
+    elif len(n) > b:
+        pass
+    return n
+
+def bits(n, b):
+    # takes an int n and int b
+    # returns a string of n represented in binary with b bits
+    return pad(bin(n).split('b')[1],b)
 
 class GUI:
     def __init__(self):
-        self.cpu = CPU()
-        self.width = 1408
-        self.height = 776
+        self.badge = Badge()
+        self.width = 1232
+        self.height = 664
         self.window = tk.Tk()
         self.window.title("BVM: 2022 Hackaday Supercon Badge Virtual Machine")
         self.canvas = tk.Canvas(self.window, width=self.width, height=self.height, bd=0)
-        bg = Image.open("gui_assets/badgeface.png")
+        bg = Image.open("gui_assets/badgeface.jpg")
         bg.thumbnail((self.width, self.height), Image.ANTIALIAS)
         self.bgImage = ImageTk.PhotoImage(bg)
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.bgImage)
@@ -30,15 +42,51 @@ class GUI:
         self.parsePnp()
         self.redLeds.sort()
         self.yellowLeds.sort()
+        self.canvas.pack()
 
     def run(self):
-        self.window.mainloop()
+        #self.window.mainloop()
+        self.badge.load('program.bvm')
+        pageLeds = [154, 155, 156, 183]
+        pcLeds = [82, 83, 84, 85, 86, 87, 88, 89, 78, 79, 80, 81]
+        while 1:
+            self.window.update()
+
+            # Page
+            page = self.badge.page
+            pageBits = bits(page, 4)
+            for i in range(0, 4):
+                self.redLeds[pageLeds[i]-1].setVal(int(pageBits[i]))
+
+            # Program Counter
+            pc = self.badge.cpu.getPC()
+            pcBits = bits(pc, 12)
+            for i in range(0, 12):
+                self.yellowLeds[pcLeds[i]-1].setVal(int(pcBits[i]))
+
+            # Memory matrix
+            for i in range(0, 16):
+                # PAGE
+                data = bits(self.badge.cpu.ram[i+16*page], 4)
+                for bit in range(0,4):
+                    self.redLeds[(i+1)*8-bit-1].setVal(int(data[3-bit]))
+                # PAGE+1
+                data = bits(self.badge.cpu.ram[(i+16*(page+1))], 4)
+                for bit in range(0,4):
+                    self.redLeds[(i+1)*8-bit-5].setVal(int(data[3-bit]))
+
+            time.sleep(1)
+            self.badge.step()
+            #if self.redLeds[0].val == 0:
+            #    self.redLeds[0].setVal(1)
+            #else:
+            #    self.redLeds[0].setVal(0)
 
     def parsePnp(self):
         # pcb width 174.955 mm    2701 px      15.44 px/mm    /2=7.72
-        scale = 7.75
-        x0 = 31
-        y0 = 21
+        scale = 6.91
+        x0 = 13
+        y0 = 4
         with open("gui_assets/pnp.csv", newline='') as csvfile:
             reader = csv.reader(csvfile)
             header = next(reader)
@@ -60,23 +108,26 @@ class GUI:
 
 class LED:
     def __init__(self, num, x, y, theta, color, canvas):
-        self.w = 20
-        self.h = 10
+        assert(color in ["red", "yellow"])
+        self.w = 16
+        self.h = 8
         self.x = x
         self.y = y
         self.num = num
-        self.theta = -math.radians(theta)
+        self.theta = int(theta%360)
+        #self.theta = -math.radians(theta)
         self.color = color
-        if self.color == "red":
-            self.offColor = "#400"
-            self.onColor = "red"
-        elif self.color == "yellow":
-            self.offColor = "#440"
-            self.onColor = "yellow"
+        prefix = self.color[0:3] + str(self.theta)
+        if self.theta == 45:
+            self.px = 60/3
         else:
-            # This should never happen
-            self.offColor = "blue"
-            self.onColor = "blue"
+            self.px = 50/3
+        offImageObj = Image.open("gui_assets/leds/" + prefix + "off.jpg")
+        offImageObj.thumbnail((self.px, self.px), Image.ANTIALIAS)
+        onImageObj = Image.open("gui_assets/leds/" + prefix + "on.jpg")
+        onImageObj.thumbnail((self.px, self.px), Image.ANTIALIAS)
+        self.offImage = ImageTk.PhotoImage(offImageObj)
+        self.onImage = ImageTk.PhotoImage(onImageObj)
         self.canvas = canvas
         self.val = 0
         self.draw()
@@ -88,15 +139,16 @@ class LED:
         return str(self.num)
 
     def draw(self):
-        x0 = self.x+(-self.w*math.cos(self.theta)/2+self.h*math.sin(self.theta)/2)
-        y0 = self.y+(-self.h*math.cos(self.theta)/2-self.w*math.sin(self.theta)/2)
-        x1 = self.x+(-self.w*math.cos(self.theta)/2-self.h*math.sin(self.theta)/2)
-        y1 = self.y+(self.h*math.cos(self.theta)/2-self.w*math.sin(self.theta)/2)
-        x2 = self.x+(self.w*math.cos(self.theta)/2-self.h*math.sin(self.theta)/2)
-        y2 = self.y+(self.h*math.cos(self.theta)/2+self.w*math.sin(self.theta)/2)
-        x3 = self.x+(self.w*math.cos(self.theta)/2+self.h*math.sin(self.theta)/2)
-        y3 = self.y+(-self.h*math.cos(self.theta)/2+self.w*math.sin(self.theta)/2)
-        self.canvas.create_polygon(x0, y0, x1, y1, x2, y2, x3, y3, fill=self.offColor)
+        self.image = self.canvas.create_image(self.x, self.y, anchor=tk.CENTER, image=self.offImage)
+
+    def setVal(self, val):
+        self.val = val
+        if self.val:
+            image = self.onImage
+        else:
+            image = self.offImage
+        self.canvas.itemconfig(self.image, image=image)
+
 
 ##################### LED Map #####################
 # Red LEDs:
