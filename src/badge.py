@@ -8,7 +8,8 @@ from bvmParser import parse
 from timeit import default_timer as timer
 from random import randint
 class Badge():
-    def __init__(self):
+    def __init__(self, inputMode):
+        self.inputMode = inputMode
         self.cpu = CPU()
         self.initMemory()
         self.clock = 0b0
@@ -56,15 +57,17 @@ class Badge():
         with open(program) as f:
             lines = f.readlines()
             for line in lines:
-                line = line.replace(" ","")
+                #line = line.replace(" ","")
+                line = line.replace("\n","")
                 line = line.split('//')[0]
                 if line != '':
-                    self.progMem.append(int(line,2))
+                    self.progMem.append(line)
 
 
     def step(self):
-        instruction = parse(self.progMem[self.cpu.getPC()])
+        instruction = parse(self.progMem[self.cpu.getPC()], self.inputMode)
         if instruction is not None:
+            #print(instruction)
             getattr(self.cpu, instruction['op'])(instruction['args'])
         self.cpu.step()
 

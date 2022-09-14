@@ -24,8 +24,8 @@ def bits(n, b):
     return pad(bin(n).split('b')[1],b)
 
 class GUI:
-    def __init__(self):
-        self.badge = Badge()
+    def __init__(self, inputMode):
+        self.badge = Badge(inputMode)
         self.guiScale = 3
         self.width = 3696/self.guiScale
         self.height = 1992/self.guiScale
@@ -91,11 +91,14 @@ class GUI:
         self.window.after(self.frameDelay, self.runtimeTasks)
 
 
+    def load(self, file):
+        if file is not None:
+            self.badge.load(file)
+
+
     def run(self):
         self.window.after(self.frameDelay, self.runtimeTasks)
-        self.badge.load('heart.bvm')
         self.window.mainloop()
-
 
     def parsePnp(self):
         # pcb width 174.955 mm    2701 px      15.44 px/mm    /2=7.72
