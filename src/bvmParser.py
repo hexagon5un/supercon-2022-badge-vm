@@ -450,7 +450,6 @@ def parse(instruction, mode):
                         'op': 'SKIP',
                         'args': {'f':format(args[0]), 'm':format(args[1])}
                     }
-                    
     
     return None
 
