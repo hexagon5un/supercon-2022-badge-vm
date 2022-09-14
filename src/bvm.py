@@ -5,23 +5,31 @@
 
 from bvmParser import parse
 from bvmCPU import CPU
+from bvmGUI import GUI
+
+import sys
+import getopt
 
 class BVM:
-    def __init__(self):
+    def __init__(self, inputMode):
         self.progMem = []
         self.cpu = CPU()
+        self.inputMode = inputMode
 
     def load(self, program):
-        with open(program) as f:
-            lines = f.readlines()
-            for line in lines:
-                line = line.replace(" ","")
-                line = line.split('//')[0]
-                if line != '':
-                    self.progMem.append(int(line,2))
+        if program is not None:
+            with open(program) as f:
+                lines = f.readlines()
+                for line in lines:
+                    #line = line.replace(" ","")
+                    line = line.replace("\n","")
+                    line = line.split('//')[0]
+                    if line != '':
+                        self.progMem.append(line)
 
     def step(self):
-        instruction = parse(self.progMem[self.cpu.getPC()])
+        instruction = parse(self.progMem[self.cpu.getPC()], self.inputMode)
+        #print(instruction)
         if instruction is not None:
             getattr(self.cpu, instruction['op'])(instruction['args'])
         self.cpu.step()
@@ -33,8 +41,35 @@ class BVM:
             self.step()
 
 
+def main(argv):
+    try:
+        opts, args = getopt.getopt(argv,"tbi:",['input='])
+    except getopt.GetoptError:
+        print("bvm.py [-t] [-b] [-i] filename.bvm")
+        sys.exit(2)
+        
+    guiMode = True
+    inputMode = "asm"
+    inFile = None
+
+    for opt, arg in opts:
+        if opt == '-t':
+            guiMode = False
+        if opt == '-b':
+            inputMode = "bin"
+        if opt == '-i':
+            inFile = arg
+
+    if guiMode:
+        gui = GUI(inputMode)
+        gui.load(inFile)
+        gui.run()
+    else:
+        # No GUI, run program.bvm
+        bvm = BVM(inputMode)
+        bvm.load(inFile)
+        bvm.run()
+
+
 if __name__ == "__main__":
-    bvm = BVM()
-    bvm.load('program.bvm')
-    print(bvm.progMem)
-    bvm.run()
+    main(sys.argv[1:])

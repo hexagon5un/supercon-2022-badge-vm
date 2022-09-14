@@ -174,33 +174,60 @@ class CPU:
     
 
     def OR(self, args):
-        x = args['x']
-        y = args['y']
-        self.ram[x] = self.ram[x] | self.ram[y]
-        if self.ram[x] == 0:
-            self.Z = 1
-        else:
-            self.Z = 0
+        match args['mode']:
+            case 0:
+                x = args['x']
+                y = args['y']
+                self.ram[x] = self.ram[x] | self.ram[y]
+                if self.ram[x] == 0:
+                    self.Z = 1
+                else:
+                    self.Z = 0
+            case 1:
+                n = args['n']
+                self.ram[0] = self.ram[0] | n
+                if self.ram[0] == 0:
+                    self.Z = 1
+                else:
+                    self.Z = 0
     
 
     def AND(self, args):
-        x = args['x']
-        y = args['y']
-        self.ram[x] = self.ram[x] & self.ram[y]
-        if self.ram[x] == 0:
-            self.Z = 1
-        else:
-            self.Z = 0
+        match args['mode']:
+            case 0:
+                x = args['x']
+                y = args['y']
+                self.ram[x] = self.ram[x] & self.ram[y]
+                if self.ram[x] == 0:
+                    self.Z = 1
+                else:
+                    self.Z = 0
+            case 1:
+                n = args['n']
+                self.ram[0] = self.ram[0] & n
+                if self.ram[0] == 0:
+                    self.Z = 1
+                else:
+                    self.Z = 0
     
 
     def XOR(self, args):
-        x = args['x']
-        y = args['y']
-        self.ram[x] = self.ram[x] ^ self.ram[y]
-        if self.ram[x] == 0:
-            self.Z = 1
-        else:
-            self.Z = 0
+        match args['mode']:
+            case 0:
+                x = args['x']
+                y = args['y']
+                self.ram[x] = self.ram[x] ^ self.ram[y]
+                if self.ram[x] == 0:
+                    self.Z = 1
+                else:
+                    self.Z = 0
+            case 1:
+                n = args['n']
+                self.ram[0] = self.ram[0] ^ n
+                if self.ram[0] == 0:
+                    self.Z = 1
+                else:
+                    self.Z = 0
     
 
     def MOV(self, args):
