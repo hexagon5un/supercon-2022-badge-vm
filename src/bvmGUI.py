@@ -30,7 +30,7 @@ class GUI:
         self.width = 3696/self.guiScale
         self.height = 1992/self.guiScale
         self.window = tk.Tk()
-        self.frameDelay = 500
+        self.frameDelay = 10
         self.window.title("BVM: 2022 Hackaday Supercon Badge Virtual Machine")
         self.canvas = tk.Canvas(self.window, width=self.width, height=self.height, bd=0)
         bg = Image.open("gui_assets/badgeface.jpg")
@@ -47,10 +47,21 @@ class GUI:
         self.canvas.pack()
         self.ledMap = {
             'page': [154, 155, 156, 183],
-            'pc': [82, 83, 84, 85, 86, 87, 88, 89, 78, 79, 80, 81]
+            'pc': [82, 83, 84, 85, 86, 87, 88, 89, 78, 79, 80, 81],
+            'clk': 148,
+            'nclk': 149
         }
 
     def runtimeTasks(self):
+
+        # Clock
+        clock = self.badge.clock
+        if clock == 1:
+            self.redLeds[self.ledMap['clk']].setVal(1)
+            self.redLeds[self.ledMap['nclk']].setVal(0)
+        else:
+            self.redLeds[self.ledMap['clk']].setVal(0)
+            self.redLeds[self.ledMap['nclk']].setVal(1)
 
         # Page
         page = self.badge.page
@@ -71,11 +82,12 @@ class GUI:
             for bit in range(0,4):
                 self.redLeds[(i+1)*8-bit-1].setVal(int(data[3-bit]))
             # PAGE+1
-            data = bits(self.badge.cpu.ram[(i+16*(page+1))], 4)
+            data = bits(self.badge.cpu.ram[(i+16*((page+1)%16))], 4)
             for bit in range(0,4):
                 self.redLeds[(i+1)*8-bit-5].setVal(int(data[3-bit]))
 
-        self.badge.step()
+        #self.badge.step()
+        self.badge.update()
         self.window.after(self.frameDelay, self.runtimeTasks)
 
 
@@ -176,7 +188,7 @@ class LED:
 # 147: ACC1 OUT
 # 148: ACC0 OUT
 # 149: CLK
-# 150: CLK Inverter
+# 150: nCLK
 # 151: N (Next to EXR)
 # 152: Carry Input Logic CIN (Cin ENA)
 # 153: Carry Inpput Logic INV (DATA INV)
