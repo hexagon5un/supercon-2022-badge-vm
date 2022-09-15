@@ -10,4 +10,4 @@ Run the program with `python bvm.py`. The following options are available:
 - `-b` Binary mode. Expect 1's and 0's in the input file instead of assembly
 - `-i` Input. The file to be opened.
 
-Example: `python bvm.py -b -i heart.bvm` will launch the BVM with a GUI, reading a text file called `heart.bvm` which is written in binary.
+Example: `python bvm.py -i heart.bvm` will launch the BVM with a GUI, reading a text file called `heart.bvm` which is written in assembly.
