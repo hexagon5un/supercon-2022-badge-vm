@@ -27,6 +27,7 @@ class CPU:
     def __init__(self):
         self.ram = [0] * 256
         self.sp = 0
+        self.pc = 0
 
         # Flags
         self.V = 0
@@ -35,18 +36,20 @@ class CPU:
 
 
     def getPC(self):
-        pcl = self.ram[13]
-        pcm = self.ram[14] << 4
-        pch = self.ram[15] << 8
-        return pch | pcm | pcl
+        #pcl = self.ram[13]
+        #pcm = self.ram[14] << 4
+        #pch = self.ram[15] << 8
+        #return pch | pcm | pcl
+        return self.pc
 
 
     def setPC(self, pc):
-        pc = bin(pc % 4096).split('b')[1]
-        pc = pad(pc, 12)
-        self.ram[13] = int(pc[8:12],2)
-        self.ram[14] = int(pc[4:8],2)
-        self.ram[15] = int(pc[0:4],2)
+        #pc = bin(pc % 4096).split('b')[1]
+        #pc = pad(pc, 12)
+        #self.ram[13] = int(pc[8:12],2)
+        #self.ram[14] = int(pc[4:8],2)
+        #self.ram[15] = int(pc[0:4],2)
+        self.pc = pc % 4096
 
 
     def step(self):
@@ -57,14 +60,24 @@ class CPU:
     def handleJumps(self, dest):
         if dest == 0x0c:
             # dest is JSR, execute a subroutine call
+            pc = bin(pc % 4096).split('b')[1]
+            pc = pad(pc, 12)
             self.sp = (self.sp + 1) % 8
-            self.ram[0x10+self.sp*3-3] = self.ram[0x0d]
-            self.ram[0x10+self.sp*3-2] = self.ram[0x0e]
-            self.ram[0x10+self.sp*3-1] = self.ram[0x0f]
-            self.ram[0x0d] = self.ram[0x0c]
+            # Load the current PC into the stack
+            self.ram[0x10+self.sp*3-3] = int(pc[8:12],2)#self.ram[0x0d]
+            self.ram[0x10+self.sp*3-2] = int(pc[4:8],2)#self.ram[0x0e]
+            self.ram[0x10+self.sp*3-1] = int(pc[0:4],2)#self.ram[0x0f]
+            # Set the PC
+            jsr = self.ram[0x0c]
+            pcm = self.ram[0x0e] << 4
+            pch = self.ram[0x0f] << 8
+            self.pc = pch | pcm | jsr - 1 # Unsure if -1 is needed, compare to real badge
         elif dest == 0x0d:
             # dest is PCL, execute a program jump
-            # I don't think there's anything special to do here?
+            pcl = self.ram[0x0d]
+            pcm = self.ram[0x0e] << 4
+            pch = self.ram[0x0f] << 8
+            self.pc = pch | pcm | pcl - 1 # Unsure if -1 is needed, compare to real badge
             pass
 
 
@@ -330,26 +343,26 @@ class CPU:
 
     def BSET(self, args):
         r = self.ram[args['g']]
-        rBin = bin(r).split('b')[1]
+        rBin = list(bits(r,4))
         rBin[3-args['m']] = "1"
-        self.ram[args['g']] = int(rBin,2)
+        self.ram[args['g']] = int("".join(rBin),2)
         assert self.ram[args['g']] < 16
     
 
     def BCLR(self, args):
         r = self.ram[args['g']]
-        rBin = bin(r).split('b')[1]
+        rBin = list(bits(r,4))
         rBin[3-args['m']] = "0"
-        self.ram[args['g']] = int(rBin,2)
+        self.ram[args['g']] = int("".join(rBin),2)
         assert self.ram[args['g']] < 16
     
 
     def BTG(self, args):
         r = self.ram[args['g']]
-        bit = int(bin(r).split('b')[1][3-args['m']])
-        rBin = bin(r).split('b')[1]
+        bit = int(bits(r,4)[3-args['m']])
+        rBin = list(bits(r,4))
         rBin[3-args['m']] = str((bit+1)%2)
-        self.ram[args['g']] = int(rBin,2)
+        self.ram[args['g']] = int("".join(rBin),2)
         assert self.ram[args['g']] < 16
     
 
@@ -366,9 +379,13 @@ class CPU:
 
     def RET(self, args):
         self.ram[0] = args['n']
-        self.ram[13] = self.ram[0x10+self.sp*3-3]
-        self.ram[14] = self.ram[0x10+self.sp*3-2]
-        self.ram[15] = self.ram[0x10+self.sp*3-1]
+        #self.ram[13] = self.ram[0x10+self.sp*3-3]
+        #self.ram[14] = self.ram[0x10+self.sp*3-2]
+        #self.ram[15] = self.ram[0x10+self.sp*3-1]
+        pcl = self.ram[0x10+self.sp*3-3]
+        pcm = self.ram[0x10+self.sp*3-2] << 4
+        pch = self.ram[0x10+self.sp*3-1] << 8
+        self.pc = pch | pcm | pcl
         self.sp = (self.sp - 1) % 8
     
 

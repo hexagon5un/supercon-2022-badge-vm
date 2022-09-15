@@ -12,11 +12,16 @@
 //0000 0100 1000 // DSZ 8
 //1111 1111 1101 // JR -2     this infinitley loops (intentionally)
 
-mov r0,0x4
-mov r0,0xF
-mov r0,[0x38]
-mov r0,4
-mov r1,1
-or r0,r1
-mov r2,8
-mov r5,1
+//mov r0,0x4
+//mov r0,0xF
+//mov r0,[0x38]
+//mov r0,4
+//mov r1,1
+//or r0,r1
+//mov r2,8
+//mov r5,1
+
+mov r0,0xf  // write 0xf to r0
+mov r13,3   // execute program jump (pc <- 3)
+mov r1,0xf  // this should be skipped when the PC increments to 3
+mov r2,0x1  // write 1 to r2

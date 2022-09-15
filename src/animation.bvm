@@ -1,0 +1,138 @@
+// r0   temporary storate
+// r1   temporary storage
+// r2   display address nibble
+// r3   display address nibble
+// r4   
+// r5
+// r6
+// r7
+// r8   delay counter
+// r9   animation counter
+
+mov r0,0x8      // 100 Hz
+mov [0xf1],r0   // set clock
+
+mov r0,0x2
+mov r2,r0       // Write 0x2 to r2
+mov r0,0x0
+mov r3,r0       // Write 0x0 to r3
+mov r0,0xf      // Write 0xf to r0
+mov r4,1        // Write 1 to r4
+mov [2:3],r0    // Move [r0] to [r2:r3] (write 0xf to 0x20)
+mov r0,2
+mov [0xf0],r0   // Set page to 2
+mov r0,0x1
+mov r9,0xf
+mov [2:3],r0    // Move [r0] to [r1:r2]
+
+// Move the dot down by one
+mov r0,[2:3]
+mov r1,r0
+mov r0,0
+mov [2:3],r0    // Move [r0] to [r1:r2]
+mov r0,r1
+inc r3
+mov [2:3],r0    // Move [r0] to [r1:r2]
+
+// Delay
+mov r8,0x4
+dsz r8
+jr 0b11111110   // Execute a wait by counting down
+
+// Loop until dot reaches bottom of screen
+dsz r9
+jr 0b11110100
+
+// set the animation counter to 4
+mov r9,0x3
+
+// Move the dot to the right
+mov r0,[2:3]
+mov r1,r0
+mov r0,0
+mov [2:3],r0    // Move [r0] to [r1:r2]
+mov r0,r1
+add r0,r0       // left shift
+mov [2:3],r0    // Move [r0] to [r1:r2]
+
+// Delay
+mov r8,0x4
+dsz r8
+jr 0b11111110   // Execute a wait by counting down
+
+// Loop until dot reaches MSB
+dsz r9
+jr 0b11110100
+
+// Move the dot to the next page
+mov r0,[2:3]
+mov r1,r0
+mov r0,0
+mov [2:3],r0
+mov r2,0x3      // change the page we're writing to
+mov r0,0x1
+mov [2:3],r0    // Move [r0] to [r1:r2]
+
+// set the animation counter to 4
+mov r9,0x3
+
+// Move the dot to the right
+mov r0,[2:3]
+mov r1,r0
+mov r0,0
+mov [2:3],r0    // Move [r0] to [r1:r2]
+mov r0,r1
+add r0,r0       // left shift
+mov [2:3],r0    // Move [r0] to [r1:r2]
+
+// Delay
+mov r8,0x4
+dsz r8
+jr 0b11111110   // Execute a wait by counting down
+
+// Loop until dot reaches MSB
+dsz r9
+jr 0b11110100
+
+mov r9,0xf
+
+// Move the dot up by one
+mov r0,[2:3]
+mov r1,r0
+mov r0,0
+mov [2:3],r0    // Move [r0] to [r1:r2]
+mov r0,r1
+dec r3
+mov [2:3],r0    // Move [r0] to [r1:r2]
+
+// Delay
+mov r8,0x4
+dsz r8
+jr 0b11111110   // Execute a wait by counting down
+
+// Loop until dot reaches bottom of screen
+dsz r9
+jr 0b11110100
+
+// set the animation counter to 4
+mov r9,0x3
+
+// Move the dot to the left
+mov r0,[2:3]
+mov r1,r0
+mov r0,0
+mov [2:3],r0    // Move [r0] to [r1:r2]
+mov r0,r1
+add r0,r0       // right shift
+add r0,r0
+add r0,r0
+mov [2:3],r0    // Move [r0] to [r1:r2]
+
+// Delay
+mov r8,0x4
+dsz r8
+jr 0b11110100   // Execute a wait by counting down
+
+// Loop until dot reaches LSB
+dsz r9
+jr 0b11110100

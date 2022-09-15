@@ -366,24 +366,27 @@ def parse(instruction, mode):
                         }
                 case 'inc':
                     # R0,N
-                    assert(nArgs==2)
+                    assert(nArgs==1)
+                    y = int(args[0][1:])
                     return {
                         'op': 'INC',
-                        'args': {'n':format(args[0])}
+                        'args': {'y':y}
                         }
                 case 'dec':
                     # R0,N
-                    assert(nArgs==2)
+                    assert(nArgs==1)
+                    y = int(args[0][1:])
                     return {
                         'op': 'DEC',
-                        'args': {'n':format(args[0])}
+                        'args': {'y':y}
                         }
                 case 'dsz':
-                    # R0,N
-                    assert(nArgs==2)
+                    # RY
+                    assert(nArgs==1)
+                    y = int(args[0][1:])
                     return {
                         'op': 'DSZ',
-                        'args': {'n':format(args[0])}
+                        'args': {'y':y}
                         }
                 case 'exr':
                     # N
@@ -395,7 +398,7 @@ def parse(instruction, mode):
                 case 'bit':
                     # RG,M
                     assert(nArgs==2)
-                    g = format(args[0][1:])
+                    g = int(args[0][1:])
                     m = format(args[1])
                     return {
                         'op': 'BIT',
