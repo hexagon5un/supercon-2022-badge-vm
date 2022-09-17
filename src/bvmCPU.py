@@ -3,6 +3,7 @@
 # 3.12.2022
 # requires Python 3.10 or higher
 
+
 def pad(n, b):
     if len(n) < b:
         n = '0'*(b-len(n)) + n
