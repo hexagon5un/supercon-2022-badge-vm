@@ -83,44 +83,44 @@ class CPU:
 
 
     def ADD(self, args):
-        match args['mode']:
-            case 0: # RX,RY
-                x = args['x']
-                y = args['y']
-                a = self.ram[x]
-                b = self.ram[y]
-                res = a + b
-                self.ram[x] = res % 16
-                if res > 15:
-                    self.C = 1
-                else:
-                    self.C = 0
-                if res == 0:
-                    self.Z = 1
-                else:
-                    self.Z = 0
-                if (signed(a, 4) + signed(b, 4) > 7) or (signed(a, 4) + signed(b, 4) < -8):
-                    self.V = 1
-                else:
-                    self.V = 0
+        if args['mode'] == 0:
+            # RX,RY
+            x = args['x']
+            y = args['y']
+            a = self.ram[x]
+            b = self.ram[y]
+            res = a + b
+            self.ram[x] = res % 16
+            if res > 15:
+                self.C = 1
+            else:
+                self.C = 0
+            if res == 0:
+                self.Z = 1
+            else:
+                self.Z = 0
+            if (signed(a, 4) + signed(b, 4) > 7) or (signed(a, 4) + signed(b, 4) < -8):
+                self.V = 1
+            else:
+                self.V = 0
 
-            case 1: # R0,N
-                a = self.ram[0]
-                b = args['n']
-                res = a + b
-                self.ram[0] = res % 16
-                if res > 15:
-                    self.C = 1
-                else:
-                    self.C = 0
-                if res == 0:
-                    self.Z = 1
-                else:
-                    self.Z = 0
-                if (signed(a, 4) + signed(b, 4) > 7) or (signed(a, 4) + signed(b, 4) < -8):
-                    self.V = 1
-                else:
-                    self.V = 0
+        elif args['mode'] == 1: # R0,N
+            a = self.ram[0]
+            b = args['n']
+            res = a + b
+            self.ram[0] = res % 16
+            if res > 15:
+                self.C = 1
+            else:
+                self.C = 0
+            if res == 0:
+                self.Z = 1
+            else:
+                self.Z = 0
+            if (signed(a, 4) + signed(b, 4) > 7) or (signed(a, 4) + signed(b, 4) < -8):
+                self.V = 1
+            else:
+                self.V = 0
     
 
     def ADC(self, args):
@@ -188,94 +188,90 @@ class CPU:
     
 
     def OR(self, args):
-        match args['mode']:
-            case 0:
-                x = args['x']
-                y = args['y']
-                self.ram[x] = self.ram[x] | self.ram[y]
-                if self.ram[x] == 0:
-                    self.Z = 1
-                else:
-                    self.Z = 0
-            case 1:
-                n = args['n']
-                self.ram[0] = self.ram[0] | n
-                if self.ram[0] == 0:
-                    self.Z = 1
-                else:
-                    self.Z = 0
+        if args['mode'] == 0:
+            x = args['x']
+            y = args['y']
+            self.ram[x] = self.ram[x] | self.ram[y]
+            if self.ram[x] == 0:
+                self.Z = 1
+            else:
+                self.Z = 0
+        elif args['mode'] == 1:
+            n = args['n']
+            self.ram[0] = self.ram[0] | n
+            if self.ram[0] == 0:
+                self.Z = 1
+            else:
+                self.Z = 0
     
 
     def AND(self, args):
-        match args['mode']:
-            case 0:
-                x = args['x']
-                y = args['y']
-                self.ram[x] = self.ram[x] & self.ram[y]
-                if self.ram[x] == 0:
-                    self.Z = 1
-                else:
-                    self.Z = 0
-            case 1:
-                n = args['n']
-                self.ram[0] = self.ram[0] & n
-                if self.ram[0] == 0:
-                    self.Z = 1
-                else:
-                    self.Z = 0
+        if args['mode'] == 0:
+            x = args['x']
+            y = args['y']
+            self.ram[x] = self.ram[x] & self.ram[y]
+            if self.ram[x] == 0:
+                self.Z = 1
+            else:
+                self.Z = 0
+        elif args['mode'] == 1:
+            n = args['n']
+            self.ram[0] = self.ram[0] & n
+            if self.ram[0] == 0:
+                self.Z = 1
+            else:
+                self.Z = 0
     
 
     def XOR(self, args):
-        match args['mode']:
-            case 0:
-                x = args['x']
-                y = args['y']
-                self.ram[x] = self.ram[x] ^ self.ram[y]
-                if self.ram[x] == 0:
-                    self.Z = 1
-                else:
-                    self.Z = 0
-            case 1:
-                n = args['n']
-                self.ram[0] = self.ram[0] ^ n
-                if self.ram[0] == 0:
-                    self.Z = 1
-                else:
-                    self.Z = 0
+        if args['mode'] == 0:
+            x = args['x']
+            y = args['y']
+            self.ram[x] = self.ram[x] ^ self.ram[y]
+            if self.ram[x] == 0:
+                self.Z = 1
+            else:
+                self.Z = 0
+        elif args['mode'] == 1:
+            n = args['n']
+            self.ram[0] = self.ram[0] ^ n
+            if self.ram[0] == 0:
+                self.Z = 1
+            else:
+                self.Z = 0
     
 
     def MOV(self, args):
-        match args['mode']:
-            case 0: # RX,RY
-                x = args['x']
-                y = args['y']
-                self.ram[x] = self.ram[y]
-                self.handleJumps(x)
-            case 1: # RX,N
-                x = args['x']
-                n = args['n']
-                self.ram[x] = n
-                self.handleJumps(x)
-            case 2: # XY,R0
-                rx = self.ram[args['x']]
-                ry = self.ram[args['y']]
-                addr = rx << 4 | ry
-                self.ram[addr] = self.ram[0]
-            case 3: # R0,XY
-                rx = self.ram[args['x']]
-                ry = self.ram[args['y']]
-                addr = rx << 4 | ry
-                self.ram[0] = self.ram[addr]
-            case 4: # NN,R0
-                self.ram[args['nn']] = self.ram[0]
-            case 5: # R0,NN
-                self.ram[0] = self.ram[args['nn']]
-            case 6: # PC,NN
-                nnBin = bin(args['nn']).split('b')[1]
-                if len(nnBin) < 8:
-                    nnBin = '0'*(8-len(nnBin)) + nnBin
-                self.ram[14] = nnBin[4:8]
-                self.ram[15] = nnBin[0:4]
+        if args['mode'] ==  0: # RX,RY
+            x = args['x']
+            y = args['y']
+            self.ram[x] = self.ram[y]
+            self.handleJumps(x)
+        elif args['mode'] ==  1: # RX,N
+            x = args['x']
+            n = args['n']
+            self.ram[x] = n
+            self.handleJumps(x)
+        elif args['mode'] ==  2: # XY,R0
+            rx = self.ram[args['x']]
+            ry = self.ram[args['y']]
+            addr = rx << 4 | ry
+            self.ram[addr] = self.ram[0]
+        elif args['mode'] ==  3: # R0,XY
+            rx = self.ram[args['x']]
+            ry = self.ram[args['y']]
+            addr = rx << 4 | ry
+            self.ram[0] = self.ram[addr]
+        elif args['mode'] ==  4: # NN,R0
+            self.ram[args['nn']] = self.ram[0]
+        elif args['mode'] ==  5: # R0,NN
+            self.ram[0] = self.ram[args['nn']]
+        elif args['mode'] ==  6: # PC,NN
+            nnBin = bin(args['nn']).split('b')[1]
+            if len(nnBin) < 8:
+                nnBin = '0'*(8-len(nnBin)) + nnBin
+            self.ram[14] = nnBin[4:8]
+            self.ram[15] = nnBin[0:4]
     
 
     def JR(self, args):
@@ -394,19 +390,18 @@ class CPU:
         f = args['f']
         m = args['m']
         skip = False
-        match f:
-            case 0b00: # C
-                if self.C:
-                    skip = True
-            case 0b01: # NC
-                if not self.C:
-                    skip = True
-            case 0b10: # Z
-                if self.Z:
-                    skip = True
-            case 0b11: # NZ
-                if not self.Z:
-                    skip = True
+        if f ==  0b00: # C
+            if self.C:
+                skip = True
+        elif f ==  0b01: # NC
+            if not self.C:
+                skip = True
+        elif f ==  0b10: # Z
+            if self.Z:
+                skip = True
+        elif f ==  0b11: # NZ
+            if not self.Z:
+                skip = True
         if skip:
             pc = self.getPC()
             pc += (m-1)%4+1
