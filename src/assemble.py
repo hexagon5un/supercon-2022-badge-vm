@@ -1,18 +1,209 @@
 # assemble.py
 # Adam Zeloof
 # 9.17.2022
-# requires Python 3.10 or higher
+## Revised by Elliot Williams 10.18.2022 
 
-def format(n):
-    if len(n) < 2:
-        return int(n)
-    else:
-        if n[0:2] == '0x':
-            return int(n[2:],16)
-        elif n[0:2] == '0b':
-            return int(n[2:],2)
+
+DEBUG=False
+
+class Assembler:
+    
+    def strip_and_split(self, instruction):
+        ins = instruction.split(" ", 1) ## split op/arg on first whitespace
+        op = ins[0].lower()  ## regularize to lowercase, strip spaces
+        args = ins[1].split(",")
+        args = [x.strip().lower() for x in args]
+        if DEBUG:
+            print(op, args)
+        return((op, args))
+
+    def lookup(self, instruction):
+        op, args = strip_and_split(instruction)
+
+    def handle_R0_ops(self, opcode, args):
+        if args[1].startswith("r"):
+            # RX,RY
+            x = number(args[0])
+            y = number(args[1])
+            return (opcode, x, y)
         else:
-            return int(n)
+            # R0,N
+            n = number(args[1])
+            return (0x0, opcode, n)
+ 
+    def handle_generic_short_op(self, opcode, args):
+        assert( len(args)==2 )
+        args = [number(x) for x in args] 
+        return (opcode, args[0], args[1])
+    
+    def handle_generic_long_op(self, opcode, args):
+        # R0, N or Ry 
+        if len(args) == 1:
+            return (0, opcode, number(args[0]))
+        else:
+            return (0, opcode, number(args[1]))
+    
+    def handle_bitwise_ops(self, opcode, args):
+        # RG, M
+        g = number(args[0])
+        m = number(args[1])
+        assert(g < 4)
+        assert(m < 4)
+        gm = (g << 2) + m 
+        return (0, opcode, gm)
+    
+    def handle_skip(self, opcode, args):
+        # F, M
+        f = ["z","nz","c","nc"].index(args[0])
+        m = number(args[1])
+        if m == 0: 
+            m = 4
+        fm = (f << 2) + m
+        return(0, opcode, fm)
+
+    def handle_jr(self, opcode, args):
+        ## NN is a signed 8 bit
+        nn = number(args[0])
+        if not args[0].startswith("0b") and not args[0].startswith("0x"):
+            nn = twos_comp(nn, 8)
+        n0, n1 = byte_to_nibbles(nn)
+        return (0xf, n0, n1)
+    
+    def handle_mov(self, opcode, args):
+        # print(opcode,args)
+        if args[0].startswith('r') and args[1].startswith('r'):
+            # RX,RY
+            return (0x8, number(args[0]), number(args[1]))
+        elif ':' in args[0]:
+            # [X:Y],R0
+            xy = args[0].strip('[]').split(":")
+            return (0xa, number(xy[0]), number(xy[1]))
+        elif ':' in args[1]:
+            # R0,[X:Y]
+            xy = args[1].strip('[]').split(":")
+            return (0xb, number(xy[0]), number(xy[1]))
+        elif args[0].startswith('['):
+            # [NN],R0
+            nn = number(args[0].strip('[]'))
+            n0, n1 = byte_to_nibbles(nn)
+            return (0xc, n0 , n1)
+        elif args[1].startswith('['):
+            # R0,[NN]
+            nn = number(args[1].strip('[]'))
+            n0, n1 = byte_to_nibbles(nn)
+            return (0xd, n0, n1)
+        elif args[0].startswith('r'):
+            # RX,N
+            return (0x9, number(args[0]), number(args[1]))
+        elif args[0] == 'pc':
+            # PC,NN
+            nn = number(args[1])
+            n0, n1 = byte_to_nibbles(nn)
+            return (0xe, n0, n1)
+ 
+    # a lookup dictionary of instructions, the functions that handle them, and their opcodes
+    # and, or, add, and xor have Rx,Ry versions, and R0, n versions 
+    # MOV is its own monster
+    handlers = {"add":(handle_R0_ops, 1), 
+                "adc":(handle_generic_short_op, 2),
+                "sub":(handle_generic_short_op, 3),
+                "sbb":(handle_generic_short_op, 4),
+                "or" :(handle_R0_ops, 5),
+                "and":(handle_R0_ops, 6),
+                "xor":(handle_R0_ops, 7),
+                "mov":(handle_mov, None), ## many different opcodes here!
+                "jr": (handle_jr, 15), ## needs own b/c 16-bit argument 
+                "cp": (handle_generic_long_op, 0),
+                "inc":(handle_generic_long_op, 2),
+                "dec":(handle_generic_long_op, 3),
+                "dsz":(handle_generic_long_op, 4),
+                "exr":(handle_generic_long_op, 8),
+                "bit":(handle_bitwise_ops, 9), ## RG, M packed into 4 bits
+                "bset":(handle_bitwise_ops, 10),
+                "bclr":(handle_bitwise_ops, 11),
+                "btg":(handle_bitwise_ops, 12),
+                "rrc":(handle_generic_long_op, 13),
+                "ret":(handle_generic_long_op, 14),
+                "skip":(handle_skip, 15) ## flag encoding 
+                }
+
+    def assemble_single_command(self, command):
+        op, args = self.strip_and_split(command)
+        handler, opcode = self.handlers[op]
+        x, y, z = handler(self, opcode, args)
+        return (x,y,z)
+    
+    def read(self, filename=None):
+        if not filename: 
+            filename = self.infile
+        with open(filename) as f:
+            lines = f.readlines()
+            for line in lines:
+                line = line.strip()
+                line = line.split('//')[0]
+                if line:
+                    self.assembly_language.append(line)
+
+    def assemble(self, instructions=None):
+        if not instructions:
+            instructions=self.assembly_language
+        for line in instructions:
+            assembled = self.assemble_single_command(line)
+            self.machine_language.append(assembled)
+    
+    def write(self, filename=None):
+        if not filename: 
+            filename = self.outfile
+        with open(filename, 'wb') as f:
+            header = (0x00, 0xff, 0x00, 0xff, 0xa5, 0xc3)
+            length = len(self.machine_language)
+            for b in header:
+                f.write(b.to_bytes(1, byteorder='little', signed=False))
+            f.write(length.to_bytes(2, byteorder='little', signed=False))
+            for ins in self.machine_language:
+                assert(len(ins) == 3)
+                A = (ins[1] << 4) + ins[2]
+                B = ins[0]
+                f.write(A.to_bytes(1, byteorder='little', signed=False))
+                f.write(B.to_bytes(1, byteorder='little', signed=False))
+            # TODO write checksum
+
+
+    def __init__(self, infile=None):
+        self.machine_language = []
+        self.assembly_language = []
+        self.infile = infile
+
+        ## pass it a filename and it assembles it
+        if infile:
+            self.outfile = infile.split(".")[0]+".bin"
+            self.read()
+            self.assemble()
+            self.write()
+
+## Utility functions here 
+def number(n):
+    n = n.lower()
+    if n.startswith("0x"):
+        return int(n[2:], 16)
+    elif n.startswith("0b"):
+        return int(n[2:], 2)
+    elif n.startswith("r"): # register number
+        if n == "rs":  ## handles strange case with bit ops
+            return(3)
+        else:
+            return int(n[1:])
+    else:
+        return int(n)
+
+def twos_comp(n, bits):
+    assert(n in range(-2**(bits-1), 2**(bits-1)))  ## in range? 
+    return n & (2**bits-1)
+
+def byte_to_nibbles(byte):
+    n0 = byte >> 4
+    n1 = byte & 0b00001111
+    return (n0, n1)
 
 def pad(n, b):
     if len(n) < b:
@@ -26,225 +217,11 @@ def bits(n, b):
     # returns a string of n represented in binary with b bits
     return pad(bin(n).split('b')[1],b)
 
-def parse(instruction):
-    ins = instruction.split(" ")
-    if len(ins) > 1:
-        # we have an instruction in the form [ins, args]
-        op = ins[0]
-        args = ins[1].split(",")
-        nArgs = len(args)
-        match op:
-            case 'add':
-                assert(nArgs==2)
-                if args[1][0]=="r":
-                    # RX,RY
-                    x = int(args[0][1:])
-                    y = int(args[1][1:])
-                    return (0x1, x, y)
-                else:
-                    # R0,N
-                    n = format(args[1])
-                    return (0x0, 0x1, n)
-            case 'adc':
-                # RX,RY
-                assert(nArgs==2)
-                x = int(args[0][1:])
-                y = int(args[1][1:])
-                return (0x2, x, y)
-            case 'sub':
-                # RX,RY
-                assert(nArgs==2)
-                x = int(args[0][1:])
-                y = int(args[1][1:])
-                return (0x3, x, y)
-            case 'sbb':
-                # RX,RY
-                assert(nArgs==2)
-                x = int(args[0][1:])
-                y = int(args[1][1:])
-                return (0x4, x, y)
-            case 'or':
-                assert(nArgs==2)
-                if args[1][0]=="r":
-                    # RX,RY
-                    x = int(args[0][1:])
-                    y = int(args[1][1:])
-                    return (0x5, x, y)
-                else:
-                    # R0,N
-                    n = format(args[1])
-                    return (0x0, 0x5, n)
-            case 'and':
-                assert(nArgs==2)
-                if args[1][0]=="r":
-                    # RX,RY
-                    x = int(args[0][1:])
-                    y = int(args[1][1:])
-                    return (0x6, x, y)
-                else:
-                    # R0,N
-                    n = format(args[1])
-                    return (0x0, 0x6, n)
-            case 'xor':
-                assert(nArgs==2)
-                if args[1][0]=="r":
-                    # RX,RY
-                    x = int(args[0][1:])
-                    y = int(args[1][1:])
-                    return (0x7, x, y)
-                else:
-                    # R0,N
-                    n = format(args[1])
-                    return (0x0, 0x7, n)
-            case 'mov':
-                if args[0][0] == 'r' and args[1][0] == 'r':
-                    # RX,RY
-                    x = int(args[0][1:])
-                    y = int(args[1][1:])
-                    return (0x8, x, y)
-                elif args[0][0] == '[' and ':' in args[0]:
-                     # [X:Y],R0
-                    xy = args[0].strip('[]').split(":")
-                    x = int(xy[0])
-                    y = int(xy[1])
-                    return (0xa, x, y)
-                elif args[1][0] == '[' and ':' in args[1]:
-                    # R0,[X:Y]
-                    xy = args[1].strip('[]').split(":")
-                    x = int(xy[0])
-                    y = int(xy[1])
-                    return (0xb, x, y)
-                elif args[0][0] == '[':
-                    # [NN],R0
-                    nn = bits(format(args[0].strip('[]')),8)
-                    n0 = int(nn[0:4],2)
-                    n1 = int(nn[4:8],2)
-                    return (0xc, n0 , n1)
-                elif args[1][0] == '[':
-                    # R0,[NN]
-                    nn = bits(format(args[1].strip('[]')),8)
-                    n0 = int(nn[0:4],2)
-                    n1 = int(nn[4:8],2)
-                    return (0xd, n0, n1)
-                elif args[0][0] == 'r':
-                    # RX,N
-                    x = int(args[0][1:])
-                    n = format(args[1])
-                    return (0x9, x, n)
-                elif args[0] == 'pc':
-                    # PC,NN
-                    nn = bits(format(args[1].strip('[]')),8)
-                    n0 = int(nn[0:4],2)
-                    n1 = int(nn[4:8],2)
-                    return (0xe, n0, n1)
-            case 'jr':
-                # NN
-                assert(nArgs==1)
-                nn = bits(format(args[0].strip('[]')),8)
-                n0 = int(nn[0:4],2)
-                n1 = int(nn[4:8],2)
-                return (0xf, n0, n1)
-            case 'cp':
-                # R0,N
-                assert(nArgs==2)
-                n = format(args[1])
-                return (0x0, 0x0, n)
-            case 'inc':
-                # R0,N
-                assert(nArgs==1)
-                y = int(args[0][1:])
-                return (0x0, 0x2, y)
-            case 'dec':
-                # R0,N
-                assert(nArgs==1)
-                y = int(args[0][1:])
-                return (0x0, 0x3, y)
-            case 'dsz':
-                # RY
-                assert(nArgs==1)
-                y = int(args[0][1:])
-                return (0x0, 0x4, y)
-            case 'exr':
-                # N
-                assert(nArgs==1)
-                n = format(args[0])
-                return (0x0, 0x8, n)
-            case 'bit':
-                # RG,M
-                assert(nArgs==2)
-                g = bits(int(args[0][1:]),2)
-                m = bits(format(args[1]),2)
-                gm = int(g+m, 2)
-                return (0x0, 0x9, gm)
-            case 'bset':
-                # RG,M
-                assert(nArgs==2)
-                g = bits(int(args[0][1:]),2)
-                m = bits(format(args[1]),2)
-                gm = int(g+m, 2)
-                return (0x0, 0xa, gm)
-            case 'bclr':
-                # RG,M
-                assert(nArgs==2)
-                g = bits(int(args[0][1:]),2)
-                m = bits(format(args[1]),2)
-                gm = int(g+m, 2)
-                return (0x0, 0xb, gm)
-            case 'btg':
-                # RG,M
-                assert(nArgs==2)
-                g = bits(int(args[0][1:]),2)
-                m = bits(format(args[1]),2)
-                gm = int(g+m, 2)
-                return (0x0, 0xc, gm)
-            case 'rrc':
-                # RY
-                assert(nArgs==1)
-                y = int(args[0][1:])
-                return (0x0, 0xd, y)
-            case 'ret':
-                # R0,N
-                assert(nArgs==2)
-                n = format(args[1])
-                return (0x0, 0xe, n)
-            case 'skip':
-                #F,M
-                f = bits(format(args[0]))
-                m = bits(format(args[1]))
-                fm = int(f+m, 2)
-                return (0x0, 0xf, fm)
-    return None
-
-
-def load(program):
-    out = []
-    with open(program) as f:
-        lines = f.readlines()
-        for line in lines:
-            #line = line.replace(" ","")
-            line = line.replace("\n","")
-            line = line.split('//')[0]
-            if line != '':
-                out.append(parse(line))
-    return out
-
-
-def assemble(inFile, outFile):
-    instructions = load(inFile)
-    with open(outFile, 'wb') as f:
-        header = (0x00, 0xff, 0x00, 0xff, 0xa5, 0xc3)
-        length = len(instructions)
-        for b in header:
-            f.write(b.to_bytes(1, byteorder='little', signed=False))
-        f.write(length.to_bytes(2, byteorder='little', signed=False))
-        for ins in instructions:
-            assert(len(ins) == 3)
-            A = (ins[1] << 4) + ins[2]
-            B = ins[0]
-            f.write(A.to_bytes(1, byteorder='little', signed=False))
-            f.write(B.to_bytes(1, byteorder='little', signed=False))
-        # TODO write checksum
-
-
 if __name__ == "__main__":
-    assemble("animation.bvm", "animation.bin")
+    import sys
+    if len(sys.argv) == 2:
+        a = Assembler(sys.argv[1])
+        print(f"Wrote {a.outfile}")
+    else:
+        print ("""Usage: python assemble.py filename.bvm""")
+
