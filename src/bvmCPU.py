@@ -61,7 +61,7 @@ class CPU:
     def handleJumps(self, dest):
         if dest == 0x0c:
             # dest is JSR, execute a subroutine call
-            pc = bin(pc % 4096).split('b')[1]
+            pc = bin(self.pc % 4096).split('b')[1]
             pc = pad(pc, 12)
             self.sp = (self.sp + 1) % 8
             # Load the current PC into the stack
